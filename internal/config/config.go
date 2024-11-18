@@ -15,7 +15,7 @@ type Config struct {
 
 type Storage struct {
 	Host         string `yaml:"host" env:"DB-HOST" env-required:"true"`
-	Port         string `yaml:"port" env:"DB-PORT" env-required:"true"`
+	Port         int    `yaml:"port" env:"DB-PORT" env-required:"true"`
 	User         string `yaml:"user" env:"DB-USER" env-required:"true"`
 	Password     string `yaml:"password" env:"DB-PASSWORD" env-required:"true"`
 	DatabaseName string `yaml:"dbname" env:"DB-NAME" env-required:"true"`
