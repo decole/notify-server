@@ -1,8 +1,13 @@
 package main
 
 import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
+	"net/http"
 	"notify-server/internal/config"
+	"notify-server/internal/http-server/handlers/save"
+	mvLogger "notify-server/internal/http-server/middleware"
 	"notify-server/internal/lib/sl"
 	"notify-server/internal/storage/postgres"
 	"os"
@@ -21,7 +26,7 @@ func main() {
 
 	log := setupLogger(cfg.Env)
 
-	log.Info("ololo", slog.String("env", cfg.Env))
+	log.Info("environment", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
 
 	storage, err := postgres.New(cfg.Storage)
@@ -30,7 +35,31 @@ func main() {
 		os.Exit(1)
 	}
 
-	_ = storage
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(mvLogger.New(log))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+
+	router.Post("/notify", save.New(log, storage))
+
+	log.Info("server started", slog.String("address", cfg.Server.Address))
+
+	srv := &http.Server{
+		Addr:              cfg.Server.Address,
+		Handler:           router,
+		ReadHeaderTimeout: cfg.Server.Timeout,
+		WriteTimeout:      cfg.Server.Timeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Error("Failed to start server")
+	}
+
+	log.Error("server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {
