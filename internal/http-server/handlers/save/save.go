@@ -120,10 +120,6 @@ func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
 	}
 }
 
-func saveSingle(client string, message string) {
-
-}
-
 func responseOK(w http.ResponseWriter, r *http.Request, client string, message string) {
 	render.JSON(w, r, Response{
 		Response: resp.OK(),

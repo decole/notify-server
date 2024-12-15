@@ -91,7 +91,13 @@ func (s Storage) GetActiveUsers() ([]Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+
+		}
+	}(rows)
 
 	// An album slice to hold data from returned rows.
 	var clients []Client
