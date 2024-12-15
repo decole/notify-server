@@ -6,7 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"notify-server/internal/config"
+	"notify-server/internal/http-server/handlers/client/check"
+	"notify-server/internal/http-server/handlers/client/signup"
 	"notify-server/internal/http-server/handlers/save"
+	"notify-server/internal/http-server/handlers/view"
 	mvLogger "notify-server/internal/http-server/middleware"
 	"notify-server/internal/lib/sl"
 	"notify-server/internal/storage/postgres"
@@ -43,7 +46,11 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
+	router.Get("/notify/{client}", view.New(log, storage))
 	router.Post("/notify", save.New(log, storage))
+
+	router.Get("/client/is-signup/{client}", check.New(log, storage))
+	router.Post("/client/signup", signup.New(log, storage))
 
 	log.Info("server started", slog.String("address", cfg.Server.Address))
 

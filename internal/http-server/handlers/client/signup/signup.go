@@ -1,35 +1,35 @@
-package save
+package signup
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"io"
 	"log/slog"
 	"net/http"
-	"notify-server/internal/lib/sl"
-
 	resp "notify-server/internal/lib/api/response"
+	"notify-server/internal/lib/sl"
+	"strings"
 )
 
 type Request struct {
-	Client  string `json:"client,omitempty"`
-	Message string `json:"message" validate:"required"`
+	Client string `json:"client,omitempty" validate:"required"`
 }
 
 type Response struct {
 	resp.Response
-	Client  string `json:"client,omitempty"`
-	Message string `json:"message,omitempty"`
+	Client   string `json:"client,omitempty"`
+	Register string `json:"signup_status,omitempty"`
 }
 
-//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=SaveNotify
-type NotifySaver interface {
-	SaveNotify(client string, message string) error
+//go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=ClientSignup
+type ClientSignup interface {
+	SaveClient(client string) error
 }
 
-func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
+func New(log *slog.Logger, clientSaver ClientSignup) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.save.New"
 
@@ -72,37 +72,40 @@ func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
 		}
 
 		client := req.Client
+
 		if client == "" {
-			client = "anonymous"
-		}
+			log.Error("Field client is empty on request")
 
-		if req.Message == "" {
-			log.Error("Field message is empty on request")
-
-			render.JSON(w, r, resp.Error("Failed to save notify. Field message is empty!"))
+			render.JSON(w, r, resp.Error("Failed to signup client. Field client is empty!"))
 
 			return
 		}
 
-		err = notifySaver.SaveNotify(client, req.Message)
+		err = clientSaver.SaveClient(client)
 		if err != nil {
-			log.Error("failed to save notify", sl.Err(err))
+			if strings.Contains(fmt.Sprint(err), "duplicate key value violates unique constraint \"client_pku\"") {
+				render.JSON(w, r, resp.Error("Client already registered"))
 
-			render.JSON(w, r, resp.Error("failed to save notify"))
+				return
+			}
+
+			log.Error("failed to signup client", sl.Err(err))
+
+			render.JSON(w, r, resp.Error("failed to signup client"))
 
 			return
 		}
 
-		log.Info("notify added", slog.String("message", req.Message), slog.String("client", req.Client))
+		log.Info("signup client success", slog.String("client", req.Client))
 
-		responseOK(w, r, client, req.Message)
+		responseOK(w, r, client, "Registered")
 	}
 }
 
-func responseOK(w http.ResponseWriter, r *http.Request, client string, message string) {
+func responseOK(w http.ResponseWriter, r *http.Request, client string, status string) {
 	render.JSON(w, r, Response{
 		Response: resp.OK(),
 		Client:   client,
-		Message:  message,
+		Register: status,
 	})
 }
