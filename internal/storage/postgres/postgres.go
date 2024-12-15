@@ -11,6 +11,8 @@ type Storage struct {
 	db *sql.DB
 }
 
+type Client string
+
 func New(storage config.Storage) (*Storage, error) {
 	const op = "storage.postgres.New"
 
@@ -84,6 +86,31 @@ func (s Storage) GetNotify(client string) (string, error) {
 	return message, err
 }
 
+func (s Storage) GetActiveUsers() ([]Client, error) {
+	rows, err := s.db.Query("SELECT name FROM client WHERE is_active = TRUE")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// An album slice to hold data from returned rows.
+	var clients []Client
+
+	// Loop through rows, using Scan to assign column data to struct fields.
+	for rows.Next() {
+		var name Client
+		if err := rows.Scan(&name); err != nil {
+			return clients, err
+		}
+		clients = append(clients, name)
+	}
+	if err = rows.Err(); err != nil {
+		return clients, err
+	}
+
+	return clients, nil
+}
+
 func (s Storage) ClientRegistered(client string) (bool, error) {
 	const op = "storage.postgres.ClientRegistered"
 
@@ -121,6 +148,11 @@ func (s Storage) SaveClient(client string) error {
 		}
 
 		return fmt.Errorf("%s: %s", op, err)
+	}
+
+	err = s.SaveNotify(client, "Welcome to notify service")
+	if err != nil {
+		return fmt.Errorf("%s: %s save welcome message", op, err)
 	}
 
 	return err

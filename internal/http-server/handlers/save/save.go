@@ -2,6 +2,7 @@ package save
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -9,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"notify-server/internal/lib/sl"
+	"notify-server/internal/storage/postgres"
 
 	resp "notify-server/internal/lib/api/response"
 )
@@ -27,6 +29,7 @@ type Response struct {
 //go:generate go run github.com/vektra/mockery/v2@v2.28.2 --name=SaveNotify
 type NotifySaver interface {
 	SaveNotify(client string, message string) error
+	GetActiveUsers() ([]postgres.Client, error)
 }
 
 func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
@@ -72,14 +75,32 @@ func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
 		}
 
 		client := req.Client
-		if client == "" {
-			client = "anonymous"
-		}
 
 		if req.Message == "" {
 			log.Error("Field message is empty on request")
 
 			render.JSON(w, r, resp.Error("Failed to save notify. Field message is empty!"))
+
+			return
+		}
+
+		if client == "" {
+			users, err := notifySaver.GetActiveUsers()
+
+			for _, u := range users {
+				singleClient := fmt.Sprint(u)
+				err = notifySaver.SaveNotify(singleClient, req.Message)
+
+				if err != nil {
+					log.Error("failed to save notify", sl.Err(err))
+
+					render.JSON(w, r, resp.Error("failed to save notify"))
+
+					return
+				}
+			}
+
+			responseOK(w, r, "all", req.Message)
 
 			return
 		}
@@ -97,6 +118,10 @@ func New(log *slog.Logger, notifySaver NotifySaver) http.HandlerFunc {
 
 		responseOK(w, r, client, req.Message)
 	}
+}
+
+func saveSingle(client string, message string) {
+
 }
 
 func responseOK(w http.ResponseWriter, r *http.Request, client string, message string) {
