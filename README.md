@@ -59,6 +59,70 @@ ExecStart=/home/<your-user-name>/notify-service/notify-server
 WantedBy=multi-user.target
 ```
 
+## REST API
+
+-----
+
+### Register client
+
+`POST localhost:8881/client/signup`
+
+body:
+
+```json
+{
+    "client": "decole"
+}
+```
+
+-----
+
+### Check signup client
+`<user>` - your registered user
+
+`GET localhost:8881/client/is-signup/decole`
+
+For example: `GET localhost:8881/client/is-signup/<user>`
+
+-----
+
+### Get notify
+
+
+`GET localhost:8181/notify/<user>`
+
+For example: `GET localhost:8181/notify/decole`
+
+-----
+
+### Send notify by specific client
+
+`POST localhost:8881/notify`
+
+body:
+
+```json
+{
+  "client": "decole",
+  "message": "test message"
+}
+```
+
+-----
+
+### Send notify by all clients
+
+`POST localhost:8881/notify`
+
+body:
+
+```json
+{
+  "message": "test message"
+}
+```
+
+-----
 
 # RTFM
 
