@@ -22,7 +22,7 @@ type Storage struct {
 }
 
 type Server struct {
-	Address     string        `yaml:"addres" env-default:"localhost:8881"`
+	Address     string        `yaml:"address" env-default:"localhost:8881"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
