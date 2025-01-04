@@ -6,6 +6,6 @@ storage:
   password: "notify-service"
   dbname: "notify"
 http_server:
-  address: "localhost"
+  address: "localhost:8181"
   timeout: 4s
   idle_timeout: 60s
